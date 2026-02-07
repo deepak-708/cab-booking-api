@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  # Service 1: The Database
+  cab-db:
+    image: mysql:8.0
+    container_name: cab-db
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: cabapp_db
+
+    healthcheck:
+      test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+    networks:
+      - cab-network
+
+  # Service 2: Your Spring Boot App
+  cab-api:
+    build: .  # Build the Dockerfile in current directory
+    container_name: cab-api
+    ports:
+      - "8080:8080"
+    depends_on:
+      cab-db:
+        condition: service_healthy  # WAIT for DB to be fully ready
+    environment:
+      # OVERRIDE the application.properties settings here
+      SPRING_DATASOURCE_URL: jdbc:mysql://cab-db:3306/cabapp_db
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: password
+    networks:
+      - cab-network
+
+
+
+networks:
+  cab-network:
