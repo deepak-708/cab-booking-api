@@ -1,41 +1,44 @@
+
 version: '3.8'
 
 services:
-  # Service 1: The Database
+  # Service 1: The Database (Switched to Postgres)
   cab-db:
-    image: mysql:8.0
+    image: postgres:15-alpine  # Lightweight version of Postgres
     container_name: cab-db
     ports:
-      - "3306:3306"
+      - "5432:5432"  # Changed from 3306 to 5432
     environment:
-      MYSQL_ROOT_PASSWORD: password
-      MYSQL_DATABASE: cabapp_db
-
+      POSTGRES_USER: postgres      # Default superuser
+      POSTGRES_PASSWORD: password  # Password
+      POSTGRES_DB: cabapp_db       # Database name
     healthcheck:
-      test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost"]
-      timeout: 20s
-      retries: 10
+      # Postgres uses 'pg_isready' to check status
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
       - cab-network
 
   # Service 2: Your Spring Boot App
   cab-api:
-    build: .  # Build the Dockerfile in current directory
+    build: .
     container_name: cab-api
     ports:
       - "8080:8080"
     depends_on:
       cab-db:
-        condition: service_healthy  # WAIT for DB to be fully ready
+        condition: service_healthy
     environment:
-      # OVERRIDE the application.properties settings here
-      SPRING_DATASOURCE_URL: jdbc:mysql://cab-db:3306/cabapp_db
-      SPRING_DATASOURCE_USERNAME: root
+      # OVERRIDE application.properties for Docker networking
+      # Note the 'postgresql' protocol and port 5432
+      SPRING_DATASOURCE_URL: jdbc:postgresql://cab-db:5432/cabapp_db
+      SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: password
+
     networks:
       - cab-network
-
-
 
 networks:
   cab-network:
